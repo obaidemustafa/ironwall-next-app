@@ -9,25 +9,25 @@ export default function DiscoveryMonitor() {
     <div className="min-h-screen bg-background">
       <Navigation />
       
-      <main className="container mx-auto px-6 py-8 space-y-8">
+      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold mb-2">Discovery Monitor</h1>
-            <p className="text-foreground-secondary">Live fuzzing campaign visualization</p>
+            <h1 className="text-2xl sm:text-3xl font-semibold mb-2">Discovery Monitor</h1>
+            <p className="text-foreground-secondary text-sm sm:text-base">Live fuzzing campaign visualization</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="px-4 py-2 rounded-lg bg-success/10 border border-success/20 text-success text-sm font-medium flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="px-3 sm:px-4 py-2 rounded-lg bg-success/10 border border-success/20 text-success text-xs sm:text-sm font-medium flex items-center gap-2 flex-1 sm:flex-initial">
               <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
-              Running for 00:05:23
+              <span className="hidden sm:inline">Running for </span>00:05:23
             </div>
-            <Button variant="outline">Pause</Button>
-            <Button variant="destructive">Stop</Button>
+            <Button variant="outline" size="sm">Pause</Button>
+            <Button variant="destructive" size="sm">Stop</Button>
           </div>
         </div>
 
         {/* Top Metrics */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
           <StatCard
             label="Code Coverage"
             value="87.3%"

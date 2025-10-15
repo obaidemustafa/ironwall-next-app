@@ -15,7 +15,7 @@ const data: SeverityData[] = [
 
 export const SeverityChart = () => {
   return (
-    <div className="w-full h-[300px] flex items-center justify-center">
+    <div className="w-full h-[300px] relative">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
@@ -44,11 +44,11 @@ export const SeverityChart = () => {
           />
         </PieChart>
       </ResponsiveContainer>
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <div className="absolute top-1/2 left-[30%] -translate-x-1/2 -translate-y-1/2 pointer-events-none">
         <div className="text-center">
-          <p className="text-xs text-foreground-muted font-medium mono">Active Fuzzing</p>
+          <p className="text-xs text-foreground-muted font-medium mono whitespace-nowrap">Active Fuzzing</p>
           <p className="text-2xl font-semibold text-foreground">100</p>
-          <p className="text-xs text-foreground-muted">Total Findings</p>
+          <p className="text-xs text-foreground-muted whitespace-nowrap">Total Findings</p>
         </div>
       </div>
     </div>

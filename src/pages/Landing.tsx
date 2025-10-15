@@ -110,12 +110,11 @@ export default function Landing() {
       {/* Footer */}
       <footer className="border-t border-border bg-background-secondary/30 py-8">
         <div className="container mx-auto px-6">
-          <div className="flex items-center justify-between text-sm text-foreground-muted">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-foreground-muted">
             <p>© 2025 IRONWALL. Research Platform.</p>
             <div className="flex items-center gap-6">
-              <a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-foreground transition-colors">Responsible Disclosure</a>
-              <a href="#" className="hover:text-foreground transition-colors">Terms of Use</a>
+              <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+              <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
             </div>
           </div>
         </div>
