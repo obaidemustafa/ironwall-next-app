@@ -1,22 +1,28 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Shield, Chrome } from "lucide-react";
+import { Shield, Github, Chrome } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 
-export default function Login() {
+export default function Signup() {
   const navigate = useNavigate();
-  const [credentials, setCredentials] = useState({
+  const [formData, setFormData] = useState({
+    fullName: "",
     username: "",
+    email: "",
     password: "",
   });
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login
+    // Simulate signup
+    // In a real app, this would call an API
     navigate("/dashboard");
+  };
+
+  const handleGoogleSignup = () => {
+    console.log("Google Signup triggered");
   };
 
   return (
@@ -28,23 +34,51 @@ export default function Login() {
             <div className="inline-flex p-3 rounded-xl bg-gradient-to-br from-primary to-primary-glow mb-2">
               <Shield className="h-8 w-8 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-semibold">IRONWALL Console</h1>
+            <h1 className="text-2xl font-semibold">Create an Account</h1>
             <p className="text-sm text-foreground-muted">
-              Secure access to vulnerability detection platform
+              Join the IronWall research platform
             </p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleSignup} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                type="text"
+                placeholder="John Doe"
+                value={formData.fullName}
+                onChange={(e) =>
+                  setFormData({ ...formData, fullName: e.target.value })
+                }
+                className="bg-background-secondary border-border"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
               <Input
                 id="username"
                 type="text"
-                placeholder="Enter your username"
-                value={credentials.username}
+                placeholder="johndoe"
+                value={formData.username}
                 onChange={(e) =>
-                  setCredentials({ ...credentials, username: e.target.value })
+                  setFormData({ ...formData, username: e.target.value })
+                }
+                className="bg-background-secondary border-border"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="john@example.com"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
                 }
                 className="bg-background-secondary border-border"
               />
@@ -55,32 +89,17 @@ export default function Login() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
-                value={credentials.password}
+                placeholder="••••••••"
+                value={formData.password}
                 onChange={(e) =>
-                  setCredentials({ ...credentials, password: e.target.value })
+                  setFormData({ ...formData, password: e.target.value })
                 }
                 className="bg-background-secondary border-border"
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Checkbox id="remember" />
-                <Label
-                  htmlFor="remember"
-                  className="text-sm font-normal cursor-pointer"
-                >
-                  Remember me
-                </Label>
-              </div>
-              <a href="#" className="text-sm text-primary hover:underline">
-                Forgot password?
-              </a>
-            </div>
-
             <Button type="submit" className="w-full" size="lg">
-              Sign In
+              Sign Up
             </Button>
           </form>
 
@@ -98,7 +117,7 @@ export default function Login() {
           <Button
             variant="outline"
             className="w-full gap-2"
-            onClick={() => console.log("Google Login")}
+            onClick={handleGoogleSignup}
           >
             <Chrome className="h-4 w-4" />
             Google
@@ -107,20 +126,15 @@ export default function Login() {
           {/* Footer Link */}
           <div className="text-center text-sm">
             <span className="text-foreground-muted">
-              Don't have an account?{" "}
+              Already have an account?{" "}
             </span>
             <Link
-              to="/signup"
+              to="/login"
               className="text-primary hover:underline font-medium"
             >
-              Sign up
+              Sign in
             </Link>
           </div>
-
-          {/* Footer */}
-          <p className="text-center text-xs text-foreground-muted pt-4 border-t border-border">
-            Authorized users only. All actions are logged and monitored.
-          </p>
         </div>
       </div>
     </div>

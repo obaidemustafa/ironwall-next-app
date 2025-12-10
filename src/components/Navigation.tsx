@@ -1,6 +1,15 @@
 import { Link, useLocation } from "react-router-dom";
-import { Shield, Activity, History, FileText, Settings, User } from "lucide-react";
+import {
+  Shield,
+  Activity,
+  History,
+  FileText,
+  Settings,
+  User,
+  MessageSquare,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useChat } from "@/context/ChatContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   DropdownMenu,
@@ -21,6 +30,7 @@ const navItems = [
 
 export const Navigation = () => {
   const location = useLocation();
+  const { openChat } = useChat();
 
   return (
     <nav className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
@@ -31,7 +41,9 @@ export const Navigation = () => {
             <div className="p-2 rounded-lg bg-gradient-to-br from-primary to-primary-glow group-hover:scale-110 transition-transform">
               <Shield className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-semibold tracking-tight">IRONWALL</span>
+            <span className="text-xl font-semibold tracking-tight">
+              IRONWALL
+            </span>
           </Link>
 
           {/* Navigation Links */}
@@ -54,14 +66,26 @@ export const Navigation = () => {
 
           {/* User Section */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={openChat}
+              className="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+              title="AI Assistant"
+            >
+              <MessageSquare className="h-5 w-5" />
+            </button>
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background">
-                  <span className="text-xs font-semibold text-primary-foreground">AD</span>
+                  <span className="text-xs font-semibold text-primary-foreground">
+                    AD
+                  </span>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-card border-border">
+              <DropdownMenuContent
+                align="end"
+                className="w-56 bg-card border-border"
+              >
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
