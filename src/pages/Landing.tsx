@@ -13,16 +13,27 @@ export default function Landing() {
               <div className="p-2 rounded-lg bg-gradient-to-br from-primary to-primary-glow">
                 <Shield className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-semibold tracking-tight">IRONWALL</span>
+              <span className="text-xl font-semibold tracking-tight">
+                IRONWALL
+              </span>
             </div>
             <div className="flex items-center gap-6">
-              <a href="#about" className="text-sm text-foreground-secondary hover:text-foreground transition-colors">
+              <a
+                href="#about"
+                className="text-sm text-foreground-secondary hover:text-foreground transition-colors"
+              >
                 About
               </a>
-              <a href="#research" className="text-sm text-foreground-secondary hover:text-foreground transition-colors">
+              <a
+                href="#research"
+                className="text-sm text-foreground-secondary hover:text-foreground transition-colors"
+              >
                 Research Goals
               </a>
-              <a href="#docs" className="text-sm text-foreground-secondary hover:text-foreground transition-colors">
+              <a
+                href="#docs"
+                className="text-sm text-foreground-secondary hover:text-foreground transition-colors"
+              >
                 Documentation
               </a>
               <Link to="/login">
@@ -42,18 +53,19 @@ export default function Landing() {
               <Activity className="h-4 w-4 animate-pulse" />
               Research-Grade Vulnerability Detection
             </div>
-            
+
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
               Proactive Defense through
               <br />
               <span className="bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-                Attacker Emulation
+                Active Campaigns
               </span>
             </h1>
-            
+
             <p className="text-xl text-foreground-secondary max-w-2xl mx-auto">
-              IRONWALL detects chained vulnerabilities in real-world C/C++ systems before attackers do.
-              Hybrid fuzzing meets symbolic execution for comprehensive security analysis.
+              IRONWALL detects chained vulnerabilities in real-world C/C++
+              systems before attackers do. Launch campaigns to continuously
+              monitor and verify exploits.
             </p>
 
             <div className="flex items-center justify-center gap-4 pt-4">
@@ -80,7 +92,8 @@ export default function Landing() {
               </div>
               <h3 className="text-xl font-semibold mb-3">Mission</h3>
               <p className="text-foreground-secondary leading-relaxed">
-                Identify exploitable vulnerabilities through intelligent fuzzing and symbolic execution before they reach production.
+                Identify exploitable vulnerabilities through intelligent fuzzing
+                and symbolic execution before they reach production.
               </p>
             </div>
 
@@ -90,7 +103,8 @@ export default function Landing() {
               </div>
               <h3 className="text-xl font-semibold mb-3">Technology</h3>
               <p className="text-foreground-secondary leading-relaxed">
-                Hybrid approach combining AFL++, angr, and constraint-based exploit synthesis with automated verification.
+                Hybrid approach combining AFL++, angr, and constraint-based
+                exploit synthesis with automated verification.
               </p>
             </div>
 
@@ -100,7 +114,8 @@ export default function Landing() {
               </div>
               <h3 className="text-xl font-semibold mb-3">Ethics</h3>
               <p className="text-foreground-secondary leading-relaxed">
-                Strictly authorized testing in isolated environments with responsible disclosure and comprehensive audit trails.
+                Strictly authorized testing in isolated environments with
+                responsible disclosure and comprehensive audit trails.
               </p>
             </div>
           </div>
@@ -113,8 +128,18 @@ export default function Landing() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-foreground-muted">
             <p>© 2025 IRONWALL. Research Platform.</p>
             <div className="flex items-center gap-6">
-              <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
-              <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+              <Link
+                to="/privacy"
+                className="hover:text-foreground transition-colors"
+              >
+                Privacy Policy
+              </Link>
+              <Link
+                to="/terms"
+                className="hover:text-foreground transition-colors"
+              >
+                Terms of Service
+              </Link>
             </div>
           </div>
         </div>
