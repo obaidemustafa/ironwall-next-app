@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
   User,
@@ -20,14 +20,26 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
 
+// Get user from localStorage
+const getSavedUser = () => {
+  try {
+    const saved = localStorage.getItem("ironwall_user");
+    if (saved) return JSON.parse(saved);
+  } catch (e) {
+    console.error("Failed to parse user data");
+  }
+  return { username: "User", email: "", role: "user" };
+};
+
 export default function Profile() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const savedUser = getSavedUser();
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [formData, setFormData] = useState({
-    name: "Admin User",
-    email: "admin@ironwall.dev",
+    name: savedUser.username || "User",
+    email: savedUser.email || "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",

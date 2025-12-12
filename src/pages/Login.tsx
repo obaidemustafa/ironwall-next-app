@@ -1,22 +1,84 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Shield, Chrome } from "lucide-react";
+import { Shield, Chrome, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const [credentials, setCredentials] = useState({
-    username: "",
+    email: "",
     password: "",
   });
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login
-    navigate("/dashboard");
+
+    if (!credentials.email || !credentials.password) {
+      toast({
+        title: "Missing fields",
+        description: "Please enter your email and password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      // Save token and user data
+      localStorage.setItem("ironwall_token", data.token);
+      localStorage.setItem("ironwall_user", JSON.stringify(data.user));
+
+      toast({
+        title: "Welcome back!",
+        description: "Login successful. Redirecting to dashboard...",
+      });
+
+      // Redirect to dashboard
+      setTimeout(() => navigate("/dashboard"), 500);
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast({
+        title: "Login failed",
+        description: error.message || "Invalid credentials. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    toast({
+      title: "Coming soon",
+      description: "Google login will be available soon.",
+    });
   };
 
   return (
@@ -37,16 +99,18 @@ export default function Login() {
           {/* Form */}
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="username"
-                type="text"
-                placeholder="Enter your username"
-                value={credentials.username}
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={credentials.email}
                 onChange={(e) =>
-                  setCredentials({ ...credentials, username: e.target.value })
+                  setCredentials({ ...credentials, email: e.target.value })
                 }
                 className="bg-background-secondary border-border"
+                disabled={isLoading}
+                required
               />
             </div>
 
@@ -61,6 +125,8 @@ export default function Login() {
                   setCredentials({ ...credentials, password: e.target.value })
                 }
                 className="bg-background-secondary border-border"
+                disabled={isLoading}
+                required
               />
             </div>
 
@@ -79,8 +145,20 @@ export default function Login() {
               </a>
             </div>
 
-            <Button type="submit" className="w-full" size="lg">
-              Sign In
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
             </Button>
           </form>
 
@@ -98,7 +176,8 @@ export default function Login() {
           <Button
             variant="outline"
             className="w-full gap-2"
-            onClick={() => console.log("Google Login")}
+            onClick={handleGoogleLogin}
+            disabled={isLoading}
           >
             <Chrome className="h-4 w-4" />
             Google
