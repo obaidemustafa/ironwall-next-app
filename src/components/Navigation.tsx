@@ -1,4 +1,5 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import {
   Shield,
   Activity,
@@ -7,10 +8,12 @@ import {
   Settings,
   User,
   MessageSquare,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChat } from "@/context/ChatContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +22,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
 
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: Activity },
@@ -28,9 +35,88 @@ const navItems = [
   { path: "/settings", label: "Settings", icon: Settings },
 ];
 
+// Get user from localStorage
+const getSavedUser = () => {
+  try {
+    const saved = localStorage.getItem("ironwall_user");
+    if (saved) return JSON.parse(saved);
+  } catch (e) {
+    console.error("Failed to parse user data");
+  }
+  return null;
+};
+
 export const Navigation = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { openChat } = useChat();
+  const { toast } = useToast();
+  const [user, setUser] = useState(getSavedUser());
+
+  // Fetch fresh user data on mount and when localStorage changes
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = localStorage.getItem("ironwall_token");
+      if (!token) return;
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Update localStorage and state
+          localStorage.setItem("ironwall_user", JSON.stringify(data));
+          setUser(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+      }
+    };
+
+    fetchProfile();
+
+    // Listen for storage changes (for cross-tab sync)
+    const handleStorageChange = () => {
+      setUser(getSavedUser());
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    // Also listen for custom event for same-tab updates
+    const handleUserUpdate = () => {
+      setUser(getSavedUser());
+    };
+    window.addEventListener("ironwall_user_updated", handleUserUpdate);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("ironwall_user_updated", handleUserUpdate);
+    };
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("ironwall_token");
+    localStorage.removeItem("ironwall_user");
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out.",
+    });
+    navigate("/login");
+  };
+
+  const getInitials = (username?: string) => {
+    if (!username) return "U";
+    return username
+      .split(/[_\s]/)
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
     <nav className="border-b border-border bg-card/50 backdrop-blur-xl sticky top-0 z-50">
@@ -76,17 +162,32 @@ export const Navigation = () => {
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background">
-                  <span className="text-xs font-semibold text-primary-foreground">
-                    AD
-                  </span>
+                <button className="focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background rounded-full">
+                  <Avatar className="h-8 w-8 border-2 border-primary/50 hover:border-primary transition-colors cursor-pointer">
+                    <AvatarImage src={user?.avatar?.url} alt={user?.username} />
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary-glow text-primary-foreground text-xs font-semibold">
+                      {getInitials(user?.username)}
+                    </AvatarFallback>
+                  </Avatar>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
                 className="w-56 bg-card border-border"
               >
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>
+                  <div className="flex flex-col">
+                    <span>{user?.username || "User"}</span>
+                    <span className="text-xs font-normal text-foreground-muted">
+                      {user?.email}
+                    </span>
+                    {user?.role && (
+                      <span className="text-xs font-medium text-primary mt-1 capitalize">
+                        {user.role}
+                      </span>
+                    )}
+                  </div>
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/profile" className="cursor-pointer">
@@ -101,7 +202,11 @@ export const Navigation = () => {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-critical cursor-pointer">
+                <DropdownMenuItem
+                  className="text-critical cursor-pointer"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
                   Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>

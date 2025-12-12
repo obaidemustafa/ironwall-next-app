@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import {
   User,
@@ -20,30 +21,88 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
 
-// Get user from localStorage
-const getSavedUser = () => {
-  try {
-    const saved = localStorage.getItem("ironwall_user");
-    if (saved) return JSON.parse(saved);
-  } catch (e) {
-    console.error("Failed to parse user data");
-  }
-  return { username: "User", email: "", role: "user" };
+interface UserData {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  avatar?: {
+    url: string;
+    publicId: string;
+  };
+  createdAt?: string;
+}
+
+// Helper to update user in localStorage and dispatch event
+const updateStoredUser = (userData: UserData) => {
+  localStorage.setItem("ironwall_user", JSON.stringify(userData));
+  // Dispatch custom event to notify Navigation component
+  window.dispatchEvent(new Event("ironwall_user_updated"));
 };
 
 export default function Profile() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const savedUser = getSavedUser();
-  const [avatarUrl, setAvatarUrl] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [user, setUser] = useState<UserData | null>(null);
   const [formData, setFormData] = useState({
-    name: savedUser.username || "User",
-    email: savedUser.email || "",
+    username: "",
+    email: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
+
+  // Fetch profile on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = localStorage.getItem("ironwall_token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem("ironwall_token");
+            localStorage.removeItem("ironwall_user");
+            navigate("/login");
+            return;
+          }
+          throw new Error("Failed to fetch profile");
+        }
+
+        const data = await response.json();
+        setUser(data);
+        setFormData((prev) => ({
+          ...prev,
+          username: data.username || "",
+          email: data.email || "",
+        }));
+        // Update localStorage
+        updateStoredUser(data);
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile. Please try again.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchProfile();
+  }, [navigate, toast]);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -78,10 +137,9 @@ export default function Profile() {
     setIsUploading(true);
 
     try {
-      const formData = new FormData();
-      formData.append("avatar", file);
+      const uploadData = new FormData();
+      uploadData.append("avatar", file);
 
-      // Get token from localStorage (you'll need to implement proper auth)
       const token = localStorage.getItem("ironwall_token") || "";
 
       const response = await fetch(`${API_BASE_URL}/api/auth/avatar`, {
@@ -89,7 +147,7 @@ export default function Profile() {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        body: formData,
+        body: uploadData,
       });
 
       if (!response.ok) {
@@ -97,7 +155,13 @@ export default function Profile() {
       }
 
       const data = await response.json();
-      setAvatarUrl(data.avatar.url);
+
+      // Update local state
+      const updatedUser = { ...user, avatar: data.avatar };
+      setUser(updatedUser);
+
+      // Update localStorage and notify other components
+      updateStoredUser(updatedUser);
 
       toast({
         title: "Avatar uploaded",
@@ -136,7 +200,12 @@ export default function Profile() {
         throw new Error("Delete failed");
       }
 
-      setAvatarUrl("");
+      // Update local state
+      const updatedUser = { ...user, avatar: { url: "", publicId: "" } };
+      setUser(updatedUser);
+
+      // Update localStorage and notify other components
+      updateStoredUser(updatedUser);
 
       toast({
         title: "Avatar removed",
@@ -154,14 +223,75 @@ export default function Profile() {
     }
   };
 
-  const handleSave = () => {
-    toast({
-      title: "Profile updated",
-      description: "Your profile information has been saved successfully.",
-    });
+  const handleSave = async () => {
+    if (!formData.username || !formData.email) {
+      toast({
+        title: "Missing fields",
+        description: "Username and email are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const token = localStorage.getItem("ironwall_token") || "";
+
+      const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Update failed");
+      }
+
+      // Update local state
+      setUser(data.user);
+
+      // Update localStorage and notify other components
+      updateStoredUser(data.user);
+
+      toast({
+        title: "Profile updated",
+        description: "Your profile information has been saved successfully.",
+      });
+    } catch (error: unknown) {
+      console.error("Save error:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to update profile. Please try again.";
+      toast({
+        title: "Update failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
+    if (!formData.currentPassword || !formData.newPassword) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all password fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (formData.newPassword !== formData.confirmPassword) {
       toast({
         title: "Error",
@@ -170,17 +300,93 @@ export default function Profile() {
       });
       return;
     }
-    toast({
-      title: "Password updated",
-      description: "Your password has been changed successfully.",
-    });
-    setFormData({
-      ...formData,
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
+
+    if (formData.newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "New password must be at least 6 characters.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+
+    try {
+      const token = localStorage.getItem("ironwall_token") || "";
+
+      const response = await fetch(`${API_BASE_URL}/api/auth/password`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword: formData.currentPassword,
+          newPassword: formData.newPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Password change failed");
+      }
+
+      toast({
+        title: "Password updated",
+        description: "Your password has been changed successfully.",
+      });
+
+      setFormData({
+        ...formData,
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    } catch (error: unknown) {
+      console.error("Password change error:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to change password.";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const getInitials = (username?: string) => {
+    if (!username) return "U";
+    return username
+      .split(/[_\s]/)
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -212,13 +418,9 @@ export default function Profile() {
               {/* Avatar Preview */}
               <div className="relative group">
                 <Avatar className="h-32 w-32 border-4 border-border">
-                  <AvatarImage src={avatarUrl} alt="Profile" />
+                  <AvatarImage src={user?.avatar?.url} alt="Profile" />
                   <AvatarFallback className="text-3xl bg-gradient-to-br from-primary to-info text-white">
-                    {formData.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()}
+                    {getInitials(user?.username)}
                   </AvatarFallback>
                 </Avatar>
 
@@ -275,7 +477,7 @@ export default function Profile() {
                     )}
                   </Button>
 
-                  {avatarUrl && (
+                  {user?.avatar?.url && (
                     <Button
                       onClick={handleDeleteAvatar}
                       disabled={isUploading}
@@ -305,12 +507,12 @@ export default function Profile() {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="username">Username</Label>
                 <Input
-                  id="name"
-                  value={formData.name}
+                  id="username"
+                  value={formData.username}
                   onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
+                    setFormData({ ...formData, username: e.target.value })
                   }
                   className="bg-background-secondary"
                 />
@@ -332,9 +534,17 @@ export default function Profile() {
               <div className="pt-2">
                 <Button
                   onClick={handleSave}
+                  disabled={isSaving}
                   className="glow-effect w-full sm:w-auto"
                 >
-                  Save Changes
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
                 </Button>
               </div>
             </div>
@@ -402,10 +612,18 @@ export default function Profile() {
               <div className="pt-2">
                 <Button
                   onClick={handlePasswordChange}
+                  disabled={isChangingPassword}
                   variant="outline"
                   className="w-full sm:w-auto"
                 >
-                  Update Password
+                  {isChangingPassword ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Password"
+                  )}
                 </Button>
               </div>
             </div>
@@ -425,20 +643,20 @@ export default function Profile() {
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg bg-background-secondary">
                 <span className="text-sm font-medium">Account Type</span>
-                <span className="px-3 py-1 rounded-lg bg-restricted/10 text-restricted text-xs font-medium w-fit">
-                  Administrator
+                <span className="px-3 py-1 rounded-lg bg-restricted/10 text-restricted text-xs font-medium w-fit capitalize">
+                  {user?.role || "User"}
                 </span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg bg-background-secondary">
                 <span className="text-sm font-medium">Member Since</span>
                 <span className="mono text-sm text-foreground-muted">
-                  October 15, 2025
+                  {formatDate(user?.createdAt)}
                 </span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg bg-background-secondary">
-                <span className="text-sm font-medium">Last Login</span>
+                <span className="text-sm font-medium">Email</span>
                 <span className="mono text-sm text-foreground-muted">
-                  2 hours ago
+                  {user?.email}
                 </span>
               </div>
             </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Shield, Chrome, Loader2 } from "lucide-react";
+import { Shield, Chrome, Loader2, User, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,22 @@ import { useToast } from "@/hooks/use-toast";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
+
+// Quick login credentials for development
+const QUICK_LOGINS = {
+  admin: {
+    email: "zubair@ironwall.com",
+    password: "admin123",
+    label: "Admin (Zubair Khan)",
+    icon: ShieldCheck,
+  },
+  user: {
+    email: "shahab@ironwall.com",
+    password: "user123",
+    label: "User (Shahab)",
+    icon: User,
+  },
+};
 
 export default function Login() {
   const navigate = useNavigate();
@@ -19,8 +35,8 @@ export default function Login() {
     password: "",
   });
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
 
     if (!credentials.email || !credentials.password) {
       toast({
@@ -62,16 +78,32 @@ export default function Login() {
 
       // Redirect to dashboard
       setTimeout(() => navigate("/dashboard"), 500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login error:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Invalid credentials. Please try again.";
       toast({
         title: "Login failed",
-        description: error.message || "Invalid credentials. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleQuickLogin = (type: "admin" | "user") => {
+    const creds = QUICK_LOGINS[type];
+    setCredentials({
+      email: creds.email,
+      password: creds.password,
+    });
+    toast({
+      title: "Credentials filled",
+      description: `${creds.label} credentials loaded. Click Sign In to continue.`,
+    });
   };
 
   const handleGoogleLogin = () => {
@@ -94,6 +126,46 @@ export default function Login() {
             <p className="text-sm text-foreground-muted">
               Secure access to vulnerability detection platform
             </p>
+          </div>
+
+          {/* Quick Login Buttons */}
+          <div className="space-y-2">
+            <p className="text-xs text-foreground-muted text-center">
+              Quick Login (Development)
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 gap-2 text-xs"
+                onClick={() => handleQuickLogin("admin")}
+                disabled={isLoading}
+              >
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                Admin (Zubair)
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 gap-2 text-xs"
+                onClick={() => handleQuickLogin("user")}
+                disabled={isLoading}
+              >
+                <User className="h-4 w-4 text-info" />
+                User (Shahab)
+              </Button>
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-foreground-muted">
+                Or enter credentials
+              </span>
+            </div>
           </div>
 
           {/* Form */}

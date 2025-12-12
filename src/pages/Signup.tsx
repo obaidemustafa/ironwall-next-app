@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Shield, Chrome, Loader2 } from "lucide-react";
+import { Shield, Chrome, Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
@@ -13,6 +18,8 @@ export default function Signup() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState<"register" | "verify">("register");
+  const [otp, setOtp] = useState("");
   const [formData, setFormData] = useState({
     fullName: "",
     username: "",
@@ -62,22 +69,117 @@ export default function Signup() {
         throw new Error(data.message || "Registration failed");
       }
 
+      toast({
+        title: "OTP Sent!",
+        description: `Please check your email (${formData.email}) for the verification code.`,
+      });
+
+      // Move to OTP verification step
+      setStep("verify");
+    } catch (error: unknown) {
+      console.error("Signup error:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "An error occurred. Please try again.";
+      toast({
+        title: "Registration failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (otp.length !== 6) {
+      toast({
+        title: "Invalid OTP",
+        description: "Please enter the 6-digit verification code.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          otp: otp,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Verification failed");
+      }
+
       // Save token and user data
       localStorage.setItem("ironwall_token", data.token);
       localStorage.setItem("ironwall_user", JSON.stringify(data.user));
 
       toast({
-        title: "Account created!",
+        title: "Account verified!",
         description: "Welcome to IronWall. Redirecting to dashboard...",
       });
 
       // Redirect to dashboard
       setTimeout(() => navigate("/dashboard"), 1000);
-    } catch (error: any) {
-      console.error("Signup error:", error);
+    } catch (error: unknown) {
+      console.error("Verification error:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Invalid OTP. Please try again.";
       toast({
-        title: "Registration failed",
-        description: error.message || "An error occurred. Please try again.",
+        title: "Verification failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/resend-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to resend OTP");
+      }
+
+      toast({
+        title: "OTP Resent!",
+        description: "Please check your email for the new verification code.",
+      });
+    } catch (error: unknown) {
+      console.error("Resend error:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Please try again.";
+      toast({
+        title: "Failed to resend",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -92,6 +194,86 @@ export default function Signup() {
     });
   };
 
+  // OTP Verification Step
+  if (step === "verify") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background-secondary to-background p-6">
+        <div className="w-full max-w-md">
+          <div className="stat-card space-y-6 shadow-2xl">
+            {/* Logo */}
+            <div className="text-center space-y-2">
+              <div className="inline-flex p-3 rounded-xl bg-gradient-to-br from-primary to-primary-glow mb-2">
+                <Shield className="h-8 w-8 text-primary-foreground" />
+              </div>
+              <h1 className="text-2xl font-semibold">Verify Your Email</h1>
+              <p className="text-sm text-foreground-muted">
+                We sent a 6-digit code to {formData.email}
+              </p>
+            </div>
+
+            {/* OTP Input */}
+            <div className="flex flex-col items-center space-y-6">
+              <InputOTP
+                maxLength={6}
+                value={otp}
+                onChange={(value) => setOtp(value)}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+
+              <Button
+                onClick={handleVerifyOTP}
+                className="w-full"
+                size="lg"
+                disabled={isLoading || otp.length !== 6}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  "Verify & Create Account"
+                )}
+              </Button>
+
+              <div className="text-center text-sm text-foreground-muted">
+                Didn't receive the code?{" "}
+                <button
+                  onClick={handleResendOTP}
+                  disabled={isLoading}
+                  className="text-primary hover:underline font-medium disabled:opacity-50"
+                >
+                  Resend OTP
+                </button>
+              </div>
+
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setStep("register");
+                  setOtp("");
+                }}
+                className="gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to registration
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Registration Step
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background-secondary to-background p-6">
       <div className="w-full max-w-md">
@@ -184,7 +366,7 @@ export default function Signup() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating account...
+                  Sending OTP...
                 </>
               ) : (
                 "Sign Up"
