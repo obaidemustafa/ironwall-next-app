@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,19 +20,14 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card";
-import {
-  CheckCircle,
-  AlertTriangle,
-  FileCode,
-  Loader2,
-  Upload,
-  FileText,
-} from "lucide-react";
+import { FileCode, Loader2, Upload, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function NewCampaign() {
+  const navigate = useNavigate();
   const [isPreprocessing, setIsPreprocessing] = useState(false);
-  const [showGuideline, setShowGuideline] = useState(false);
+  const [cveId, setCveId] = useState("");
+  const [description, setDescription] = useState("");
   const [cveFileName, setCveFileName] = useState<string | null>(null);
   const [advisoryFileType, setAdvisoryFileType] = useState<string>("any");
   const [advisoryFileName, setAdvisoryFileName] = useState<string | null>(null);
@@ -49,25 +45,44 @@ export default function NewCampaign() {
     setAdvisoryFileName(file ? file.name : null);
   };
 
+  const validateForm = (): boolean => {
+    if (!cveId.trim()) {
+      toast({
+        title: "CVE ID Required",
+        description: "Please enter a CVE ID to proceed.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    if (!description.trim()) {
+      toast({
+        title: "Description Required",
+        description: "Please provide vulnerability details or description.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    return true;
+  };
+
   const handleStartPreprocessing = () => {
+    if (!validateForm()) return;
+
     setIsPreprocessing(true);
     // Simulate backend delay
     setTimeout(() => {
       setIsPreprocessing(false);
-      setShowGuideline(true);
       toast({
         title: "Preprocessing Complete",
-        description: "Analysis finished. Please review environment guidelines.",
+        description: "Redirecting to Exploitation Engine...",
       });
+      // Navigate to exploitation engine with advisory file state
+      setTimeout(() => {
+        navigate("/exploitation-engine", {
+          state: { hasAdvisoryFile: !!advisoryFileName },
+        });
+      }, 500);
     }, 2000);
-  };
-
-  const handleVerifyExploit = () => {
-    toast({
-      title: "Exploit Verification Started",
-      description:
-        "The system is now attempting to reproduce the exploit in the sandbox.",
-    });
   };
 
   return (
@@ -125,20 +140,38 @@ export default function NewCampaign() {
 
               <div className="space-y-4 animate-fade-in">
                 <div className="space-y-2">
-                  <Label>CVE ID (Optional)</Label>
-                  <Input placeholder="e.g. CVE-2024-1234" />
+                  <Label>
+                    CVE ID <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    placeholder="e.g. CVE-2024-1234"
+                    value={cveId}
+                    onChange={(e) => setCveId(e.target.value)}
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label>Description / Details</Label>
+                  <Label>
+                    Description / Details{" "}
+                    <span className="text-destructive">*</span>
+                  </Label>
                   <Textarea
                     placeholder="Paste vulnerability details, stack traces, or invalid inputs here..."
                     className="min-h-[150px]"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    required
                   />
                 </div>
 
                 {/* Upload Advisory File with dropdown and file upload */}
                 <div className="space-y-2">
-                  <Label>Upload Advisory File</Label>
+                  <Label>
+                    Upload Advisory File{" "}
+                    <span className="text-muted-foreground text-xs">
+                      (Optional)
+                    </span>
+                  </Label>
                   <div className="flex items-center gap-4">
                     <Select
                       value={advisoryFileType}
@@ -197,69 +230,6 @@ export default function NewCampaign() {
               </Button>
             </CardFooter>
           </Card>
-
-          {showGuideline && (
-            <div className="animate-fade-in space-y-6">
-              <Card className="border-primary/50 bg-primary/5">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/20 text-primary">
-                      <CheckCircle className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <CardTitle>Environment Guidelines</CardTitle>
-                      <CardDescription>
-                        Recommended environment configuration for accurate
-                        reproduction.
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="rounded-lg bg-black/50 p-4 border border-white/10 font-mono text-sm overflow-x-auto">
-                    <pre className="text-green-400">
-                      {`# Generated Dockerfile for Sandbox
-FROM ubuntu:22.04
-
-# Dependencies
-RUN apt-get update && apt-get install -y \\
-    build-essential \\
-    clang \\
-    cmake \\
-    libssl-dev
-
-# Environment
-ENV ASAN_OPTIONS=detect_leaks=0
-ENV AFL_USE_ASAN=1
-
-# Workdir
-WORKDIR /campaign
-COPY . /campaign
-
-# Build
-RUN ./configure && make`}
-                    </pre>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-foreground-muted">
-                    <AlertTriangle className="h-4 w-4 text-warning" />
-                    <span>
-                      Ensure ASLR is disabled in the host kernel for
-                      deterministic reproduction.
-                    </span>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button
-                    onClick={handleVerifyExploit}
-                    className="w-full"
-                    variant="destructive"
-                  >
-                    Verify Exploit
-                  </Button>
-                </CardFooter>
-              </Card>
-            </div>
-          )}
         </div>
       </main>
     </div>

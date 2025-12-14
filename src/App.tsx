@@ -19,6 +19,8 @@ import Profile from "./pages/Profile";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import NewCampaign from "./pages/NewCampaign";
+import ExploitationEngine from "./pages/ExploitationEngine";
+import Validation from "./pages/Validation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -91,6 +93,22 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <NewCampaign />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/exploitation-engine"
+                element={
+                  <ProtectedRoute>
+                    <ExploitationEngine />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/validation"
+                element={
+                  <ProtectedRoute>
+                    <Validation />
                   </ProtectedRoute>
                 }
               />
