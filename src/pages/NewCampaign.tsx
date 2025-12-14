@@ -22,6 +22,13 @@ import {
 } from "@/components/ui/card";
 import { FileCode, Loader2, Upload, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  createCampaign,
+  preprocessFile,
+  generateDockerfile,
+  generateExploit,
+  FileType,
+} from "@/lib/analysisApi";
 
 export default function NewCampaign() {
   const navigate = useNavigate();
@@ -29,8 +36,10 @@ export default function NewCampaign() {
   const [cveId, setCveId] = useState("");
   const [description, setDescription] = useState("");
   const [cveFileName, setCveFileName] = useState<string | null>(null);
+  const [cveFile, setCveFile] = useState<File | null>(null);
   const [advisoryFileType, setAdvisoryFileType] = useState<string>("any");
   const [advisoryFileName, setAdvisoryFileName] = useState<string | null>(null);
+  const [advisoryFile, setAdvisoryFile] = useState<File | null>(null);
   const cveFileRef = useRef<HTMLInputElement>(null);
   const advisoryFileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -38,11 +47,13 @@ export default function NewCampaign() {
   const handleCveFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setCveFileName(file ? file.name : null);
+    setCveFile(file || null);
   };
 
   const handleAdvisoryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setAdvisoryFileName(file ? file.name : null);
+    setAdvisoryFile(file || null);
   };
 
   const validateForm = (): boolean => {
@@ -65,24 +76,78 @@ export default function NewCampaign() {
     return true;
   };
 
-  const handleStartPreprocessing = () => {
+  const handleStartPreprocessing = async () => {
     if (!validateForm()) return;
 
     setIsPreprocessing(true);
-    // Simulate backend delay
-    setTimeout(() => {
-      setIsPreprocessing(false);
+
+    try {
+      // Create campaign via API
+      const campaign = await createCampaign(
+        cveId,
+        description,
+        advisoryFileType as FileType
+      );
+
+      // Preprocess advisory file if provided
+      let preprocessingResult = null;
+      if (advisoryFile) {
+        try {
+          preprocessingResult = await preprocessFile(advisoryFile);
+        } catch (error) {
+          console.warn("Preprocessing failed:", error);
+        }
+      }
+
+      // Generate Dockerfile
+      const dockerfileResponse = await generateDockerfile(
+        cveId,
+        cveId, // target name
+        "c", // default language
+        [],
+        ""
+      );
+
+      // Generate Exploit
+      const exploitResponse = await generateExploit(
+        cveId,
+        "buffer_overflow",
+        { name: cveId },
+        preprocessingResult || undefined
+      );
+
       toast({
         title: "Preprocessing Complete",
         description: "Redirecting to Exploitation Engine...",
       });
-      // Navigate to exploitation engine with advisory file state
+
+      // Navigate to exploitation engine with all the generated data
       setTimeout(() => {
         navigate("/exploitation-engine", {
-          state: { hasAdvisoryFile: !!advisoryFileName },
+          state: {
+            hasAdvisoryFile: !!advisoryFileName,
+            campaignId: campaign.campaign_id,
+            cveId: cveId,
+            description: description,
+            dockerfile: dockerfileResponse.dockerfile,
+            exploitCode: exploitResponse.exploit_code,
+            preprocessingResult: preprocessingResult,
+          },
         });
       }, 500);
-    }, 2000);
+    } catch (error) {
+      console.error("Campaign creation failed:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to create campaign. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPreprocessing(false);
+    }
   };
 
   return (

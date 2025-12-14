@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,7 @@ import {
   Download,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import type { ValidationResult } from "@/lib/analysisApi";
 
 type ValidationStatus = "pending" | "running" | "success" | "failed";
 
@@ -32,9 +33,25 @@ interface ValidationStep {
   status: ValidationStatus;
 }
 
+interface LocationState {
+  validationId?: string;
+  validationResult?: ValidationResult;
+  validationReport?: string;
+  cveId?: string;
+  campaignId?: string;
+}
+
 export default function Validation() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  // Get state from navigation
+  const state = location.state as LocationState;
+  const apiValidationResult = state?.validationResult;
+  const apiValidationReport = state?.validationReport;
+  const cveId = state?.cveId || "CVE-2024-XXXX";
+
   const [overallStatus, setOverallStatus] =
     useState<ValidationStatus>("pending");
   const [currentStep, setCurrentStep] = useState(0);
@@ -76,16 +93,18 @@ export default function Validation() {
     "[IronWall] Waiting to start verification...",
   ]);
 
-  // Placeholder validation report
-  const validationReport = `
+  // Generate validation report based on API result or use default
+  const validationReport =
+    apiValidationReport ||
+    `
 ================================================================================
                         IRONWALL EXPLOIT VALIDATION REPORT
 ================================================================================
 
 Campaign ID:     IW-2024-001
-Target:          CVE-2024-XXXX
+Target:          ${cveId}
 Vulnerability:   Heap Buffer Overflow
-Status:          VERIFIED ✓
+Status:          ${apiValidationResult?.success ? "VERIFIED ✓" : "PENDING"}
 
 --------------------------------------------------------------------------------
 EXECUTION SUMMARY
@@ -94,7 +113,7 @@ EXECUTION SUMMARY
 Environment:     Docker (Ubuntu 22.04)
 Exploit Type:    Remote Code Execution
 Payload Size:    356 bytes
-Execution Time:  2.34 seconds
+Execution Time:  ${apiValidationResult?.execution_time || 0} seconds
 
 --------------------------------------------------------------------------------
 VALIDATION RESULTS
@@ -111,20 +130,9 @@ VALIDATION RESULTS
 TECHNICAL DETAILS
 --------------------------------------------------------------------------------
 
-Crash Address:   0x41414141
-Register State:
-  RAX: 0x0000000000000000
-  RBX: 0x00007fff5fbff8c0
-  RCX: 0x0000000041414141
-  RDX: 0x0000000000000100
-  RSI: 0x00007fff5fbff700
-  RDI: 0x0000000000000004
-
-Stack Trace:
-  #0  0x41414141 in ?? ()
-  #1  0x7f4e2a1b2000 in vulnerable_function (target.c:156)
-  #2  0x7f4e2a1b1800 in process_input (target.c:89)
-  #3  0x7f4e2a1b1400 in main (target.c:42)
+Crash Address:   ${apiValidationResult?.crash_address || "0x41414141"}
+${apiValidationResult?.stdout ? `STDOUT:\n${apiValidationResult.stdout}` : ""}
+${apiValidationResult?.stderr ? `STDERR:\n${apiValidationResult.stderr}` : ""}
 
 --------------------------------------------------------------------------------
 RECOMMENDATIONS
