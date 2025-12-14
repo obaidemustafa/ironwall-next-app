@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,16 +23,31 @@ import {
   CheckCircle,
   AlertTriangle,
   FileCode,
-  Terminal,
   Loader2,
+  Upload,
+  FileText,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function NewCampaign() {
-  const [inputMethod, setInputMethod] = useState<"cve" | "source">("cve");
   const [isPreprocessing, setIsPreprocessing] = useState(false);
   const [showGuideline, setShowGuideline] = useState(false);
+  const [cveFileName, setCveFileName] = useState<string | null>(null);
+  const [advisoryFileType, setAdvisoryFileType] = useState<string>("any");
+  const [advisoryFileName, setAdvisoryFileName] = useState<string | null>(null);
+  const cveFileRef = useRef<HTMLInputElement>(null);
+  const advisoryFileRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const handleCveFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setCveFileName(file ? file.name : null);
+  };
+
+  const handleAdvisoryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setAdvisoryFileName(file ? file.name : null);
+  };
 
   const handleStartPreprocessing = () => {
     setIsPreprocessing(true);
@@ -76,67 +91,90 @@ export default function NewCampaign() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Input Method - Always CVE Information with file upload */}
               <div className="space-y-2">
                 <Label>Input Method</Label>
-                <Select
-                  value={inputMethod}
-                  onValueChange={(val: "cve" | "source") => setInputMethod(val)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select input method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cve">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-md bg-muted border border-border flex-1">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">
                       CVE Information (Text/File)
-                    </SelectItem>
-                    <SelectItem value="source">Source Code / Binary</SelectItem>
-                  </SelectContent>
-                </Select>
+                    </span>
+                    {cveFileName && (
+                      <span className="ml-auto text-xs text-muted-foreground truncate max-w-[200px]">
+                        {cveFileName}
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="flex-shrink-0 gap-2 border-primary bg-primary/10 text-primary hover:bg-primary/20"
+                    onClick={() => cveFileRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload File
+                  </Button>
+                  <input
+                    ref={cveFileRef}
+                    type="file"
+                    className="hidden"
+                    onChange={handleCveFileChange}
+                  />
+                </div>
               </div>
 
-              {inputMethod === "cve" ? (
-                <div className="space-y-4 animate-fade-in">
-                  <div className="space-y-2">
-                    <Label>CVE ID (Optional)</Label>
-                    <Input placeholder="e.g. CVE-2024-1234" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Description / Details</Label>
-                    <Textarea
-                      placeholder="Paste vulnerability details, stack traces, or invalid inputs here..."
-                      className="min-h-[150px]"
+              <div className="space-y-4 animate-fade-in">
+                <div className="space-y-2">
+                  <Label>CVE ID (Optional)</Label>
+                  <Input placeholder="e.g. CVE-2024-1234" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description / Details</Label>
+                  <Textarea
+                    placeholder="Paste vulnerability details, stack traces, or invalid inputs here..."
+                    className="min-h-[150px]"
+                  />
+                </div>
+
+                {/* Upload Advisory File with dropdown and file upload */}
+                <div className="space-y-2">
+                  <Label>Upload Advisory File</Label>
+                  <div className="flex items-center gap-4">
+                    <Select
+                      value={advisoryFileType}
+                      onValueChange={setAdvisoryFileType}
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Select file type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="source">Source File</SelectItem>
+                        <SelectItem value="binary">Binary File</SelectItem>
+                        <SelectItem value="any">Any</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      className="flex-shrink-0 gap-2 border-primary bg-primary/10 text-primary hover:bg-primary/20"
+                      onClick={() => advisoryFileRef.current?.click()}
+                    >
+                      <Upload className="h-4 w-4" />
+                      Upload File
+                    </Button>
+                    <input
+                      ref={advisoryFileRef}
+                      type="file"
+                      className="hidden"
+                      onChange={handleAdvisoryFileChange}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Upload Advisory File</Label>
-                    <Input type="file" />
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4 animate-fade-in">
-                  <div className="p-4 rounded-lg bg-info/10 text-info border border-info/20 flex gap-3 text-sm">
-                    <Terminal className="h-5 w-5 shrink-0" />
-                    <p>
-                      For binaries and source code, preprocessing behaves
-                      differently including static analysis and symbol
-                      extraction. Ensure you provide the correct build flags if
-                      uploading source.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Target Name</Label>
-                    <Input placeholder="e.g. nginx-1.24.0" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Upload Source Archive / Binary</Label>
-                    <Input type="file" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Build Instructions (if source)</Label>
-                    <Textarea placeholder="./configure --with-debug && make" />
+                    {advisoryFileName && (
+                      <span className="text-sm text-muted-foreground truncate max-w-[200px]">
+                        {advisoryFileName}
+                      </span>
+                    )}
                   </div>
                 </div>
-              )}
+              </div>
             </CardContent>
             <CardFooter className="flex justify-end">
               <Button
